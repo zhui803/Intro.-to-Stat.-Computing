@@ -1,0 +1,252 @@
+title: "QTM 150 Project"
+author: 'Group 6: Chloe Liu, Faith Lopez, Meredith Salzinger, Wenyi Shao, and Shaochen Tu'
+date: '2022-07-22'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#Load tidyverse
+library(tidyverse)
+
+#Set Working directory 
+setwd("/Users/meredithsalzinger/Desktop/Lab Datasets")
+#Import Data Set 
+airbnb<-read.csv("AIRBnB_NYC.csv", header=TRUE)
+```
+
+
+***
+
+#### **Part A: Setting up the Research Question & Preliminary Exploratory Analysis**
+
+***
+##### **Question 1**
+Our group selected the dataset AIRBnB_NYC, which includes information about 48,895 Airbnb's listed in New York City. We will investigate what variables could be potentially correlated with the price and number of reviews of New York City Airbnb’s. For example, factors like room type and neighborhood could be relevant to price and the number of ratings, as real estate prices and popularity often vary between neighborhoods and different room types could represent larger and smaller airbnbs, which could have different prices.
+
+
+
+
+***
+##### **Question 2**
+The primary numerical response variable for this project is price. Many hosts rent places on Airbnb to make money; thus, price is a relevant variable to examine when considering an Airbnb dataset.
+
+
+```{r}
+#View summary statistics for the price variable
+summary(airbnb$price)
+#View standard deviation of price
+sd(airbnb$price,na.rm=T)
+#Produce histogram of price
+ggplot(airbnb,aes(x=price))+geom_histogram(binwidth=100)+labs(x="Price", y="Frequency")+ggtitle("Histogram of Price")+theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+***
+##### **Question 3**
+The unusual values in the data set include extreme outliers such as the max price of $10,000 and the minimum price of $0. Therefore, only observations in the price range of $25-$1000 will be included in future analysis in order to not obscure the data with unusually high or low observations.
+
+```{r}
+airbnb <- airbnb%>%
+  mutate(price_new = ifelse(price>=25,ifelse(price<=1000,price,NA),NA))
+#View summary information, standard deviation, and a histogram of new, cleaned up price variable.
+summary(airbnb$price_new)
+sd(airbnb$price_new,na.rm=T)
+ggplot(airbnb,aes(x=price_new))+geom_histogram(na.rm = T)+labs(x="Price", y="Frequency")+ggtitle("Histogram of Price")+theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+***
+##### **Question 4**
+Our main explanatory variable will be room type. It seems reasonable that different types of rooms might play a role in determining the price of an Airbnb. For example, renting out entire rooms/apartments might cost more than renting out just one private room. 
+
+```{r}
+#View the room types and their frequencies in the data set
+table(airbnb$room_type)
+
+#Produce a bar plot indicating the frequencies of each room type 
+data_group <- airbnb%>%
+  group_by(room_type)%>%
+  summarise(room_freq = n())
+
+ggplot(data_group,aes(x=room_type,y=room_freq))+geom_bar(stat = "identity")+labs(x="Room type", y="Frequency")+ggtitle("Airbnb Room Types")+theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+***
+##### **Question 5**
+
+There are no unusual variables for the room type categorical variable. All observations are within the three categories.
+
+***
+##### **Question 6** 
+It is likely that on average, the price of an "Entire home/apt" would be the most expensive, because it is the largest area being rented. The price is then likely followed by "Private room", because this is the second largest area being rented. The cheapest would likely be the "Shared room," because this is the least luxurious option.
+
+***
+##### **Question 7** 
+
+```{r}
+#Produce a boxplot showing price by room type
+ggplot(airbnb, aes(room_type, price_new)) +
+  geom_boxplot() +
+  labs(title = "Price of Airbnb's of Different room
+       types in New York City", x = "Room Type", y = "log(Price)") +
+  scale_y_log10()
+```
+
+
+***
+##### **Question 8** 
+This graph mostly matches the expectation. According to the boxplot, the "Entire home/apt” has the highest mean price, followed by "Private room," and finally "Shared room." There are plenty of outliers for each room type, but the data in between the 25th to 75th percentile show a trend that aligns with the expectation, ranking the price of the three categories, from the highest to lowest: Entire home/apt, Private room, Shared room. There is overlap between the middle 50% observations for Private room and Shared room, which means the difference of price between these two categories are less clear compared to the price difference between Entire home/apt and the other two categories. There is no overlap between the Entire home/apt and the other two categories for the middle 50% observations.
+
+***
+
+#### **Part B: Data Manipulation & Visualization and Conclusion**
+
+***
+##### **Question 1**
+
+For our second explanatory variable, we chose neighbourhood group. This variable groups the many New York Neighborhood neighborhoods into the five boroughs in which they are located: Bronx, Brooklyn, Manhattan, Queens, Staten Island, making analysis involving New York City neighborhoods more streamlined.
+
+Our rationale for investigating the relationship between Airbnb neighborhood and cost is that the five boroughs boast different levels of wealth, measured by median income and median mortgage according to data found on https://metropolismoving.com/blog/housing-costs-nyc/ . 
+By these measures, the ranking of the boroughs from most wealthy to least wealthy is: Manhattan, Brooklyn, Queens, Staten Island, and Bronx. As such, it is reasonable to question whether boroughs with higher levels of wealth will have Airbnb's that cost more, by virtue of bigger/better places, more expensive real estate, and/or more desired neighborhoods.  
+
+
+***
+##### **Question 2**
+
+```{r}
+#Create a summary table showing the price of each room type in each neighborhood group, arranged from cheapest to most expensive.
+airbnb%>%
+  group_by(room_type,neighbourhood_group)%>%
+  summarize(meanprice=mean(price))%>%
+  arrange(meanprice)
+```
+
+***
+##### **Question 3**
+
+For question 3, a plot will be produced depicting the relationship between room type, neighborhood group, and price.
+
+```{r}
+
+#Create new variable for neighborhood groupings in newer, more intuitive order
+airbnb$neighbourhood_group_f<-factor(NA,levels=c("Manhattan","Brooklyn","Staten Island","Queens","Bronx"))
+
+#Assign values of  category
+airbnb$neighbourhood_group_f[airbnb$neighbourhood_group=="Manhattan"]<-"Manhattan"
+airbnb$neighbourhood_group_f[airbnb$neighbourhood_group=="Brooklyn"]<-"Brooklyn"
+airbnb$neighbourhood_group_f[airbnb$neighbourhood_group=="Staten Island"]<-"Staten Island"
+airbnb$neighbourhood_group_f[airbnb$neighbourhood_group=="Queens"]<-"Queens"
+airbnb$neighbourhood_group_f[airbnb$neighbourhood_group=="Bronx"]<-"Bronx"
+
+#Save summary table from question 2 as an object,with neighborhood_group_f
+summary_table2<-
+airbnb%>%
+  group_by(room_type,neighbourhood_group_f)%>%
+  summarize(meanprice=mean(price))%>%
+  arrange(meanprice)
+
+#Plot the average price by room type, filled by neighborhood group
+ggplot(summary_table2,mapping=aes(x=room_type,y=meanprice, fill=neighbourhood_group_f)) +geom_col(position="dodge") +labs(x="Room type", y= "Price", fill="Neighborhood Group") +ggtitle("Price of New York City Airbnbs by Room Type and Neighborhood Group")+theme_light()
+```
+
+
+***
+##### **Question 4**
+
+As expected, the plot produced in question 3 demonstrates the same pattern of room type cost illustrated in part A's graph--the most expensive option is entire home/apt, followed by private room, then shared room.
+
+However, this plot indicates that neighborhood group may also have a relationship with price. Manhattan is clearly the most expensive neighborhood group, with the rest of the neighborhoods' cost status varying somewhat by room type. 
+
+***
+##### **Question 5**
+
+The plot produced in question 3 depicts the price for 15 combinations of room type/neighborhood group, making it quite busy. Faced with 15 bars, a reader may have a harder time digesting the information this plot illustrates. Thus, to make the plot more readable to all viewers, we can decrease the number of room type/neighborhood group combinations. This will be done by combining "private room" and "shared room" into one category called "Room", which can be compared to the existing "Entire home/apt" category. This consolidation is logical due to the similarity of the categories, and while it may remove a small amount of nuance from the graph, the price differences between the two room categories are not so dramatic as to obscure the graph's main depictions. Overall, consolidating variables will make our graph easier to understand, digest, and analyze.
+
+***
+##### **Question 6**
+For question 6, a new plot is produced with question five's propositions for improvement implemented.
+
+```{r}
+#Create a new variable for room type with "Private room" and "Shared room" consolidated into one category "room." Also, rename "Entire home/apt" to "Entire home or apartment" to eliminate undescribed abbreviations. 
+#Create a variable for 
+airbnb$room_type_f<-factor(NA,levels=c("Entire home or apartment","Room"))
+
+#Assign values to categories
+airbnb$room_type_f[airbnb$room_type=="Entire home/apt"]<-"Entire home or apartment"
+airbnb$room_type_f[airbnb$room_type=="Private room"|airbnb$room_type=="Shared room"]<-"Room"
+
+#Create new variable for neighborhood groupings in newer, more intuitive order
+airbnb$neighbourhood_group_f<-factor(NA,levels=c("Manhattan","Brooklyn","Staten Island","Queens","Bronx"))
+
+#Assign values of  category
+airbnb$neighbourhood_group_f[airbnb$neighbourhood_group=="Manhattan"]<-"Manhattan"
+airbnb$neighbourhood_group_f[airbnb$neighbourhood_group=="Brooklyn"]<-"Brooklyn"
+airbnb$neighbourhood_group_f[airbnb$neighbourhood_group=="Staten Island"]<-"Staten Island"
+airbnb$neighbourhood_group_f[airbnb$neighbourhood_group=="Queens"]<-"Queens"
+airbnb$neighbourhood_group_f[airbnb$neighbourhood_group=="Bronx"]<-"Bronx"
+
+#Save summary table from question 2 as an object,with neighborhood_group_f and room_type_f
+summary_table3<-
+airbnb%>%
+  group_by(room_type_f,neighbourhood_group_f)%>%
+  summarize(meanprice=mean(price))%>%
+  arrange(meanprice)
+
+#Plot the average price by room type, filled by neighborhood group
+ggplot(summary_table3,mapping=aes(x=room_type_f,y=meanprice, fill=neighbourhood_group_f)) +geom_col(position="dodge") +labs(x="Room type", y= "Price", fill="Neighborhood Group") +ggtitle("Price of New York City Airbnbs by Room Type and Neighborhood Group")+theme_light()
+```
+
+The plot produced in this question (question 6) depicts similar information as the plot produced in question 3; however, it is less busy and thus easier to analyze and digest and because it depicts the price of 10 room type/neighborhood group combinations instead of 15. Additionally, The label for the Entire home or apartment category was  changed from the previous name that abbreviated apartment to "apt", making the label easier to understand for readers.
+
+***
+### **Question 7**
+
+The third explanatory variable we will investigate is number of reviews. Our rationale for a potential relationship between number of reviews and price is that it is possible that as a place gets more popular with its consumers and gains more reviews, it will increase in price. With more reviews, a place could be more likely to be sought after on Airbnb, potentially because people are more likely to stay in households with more reviews because this makes them feel more certain that the households would provide a satisfactory living experience. Then, owing to increased popularity and demand the owner may find it possible and more profitable to charge more. 
+
+***
+
+### **Question 8**
+
+```{r}
+#Create a summary table
+summary_table4 <- airbnb %>%
+  group_by (room_type_f, neighbourhood_group_f) %>%
+    summarize (meanreviews = mean(number_of_reviews), meanprice = mean(price)) %>%
+      arrange (desc(meanreviews))
+  
+summary_table4
+
+#Plot average number of reviews vs average price, filled by room type
+ggplot(summary_table4, mapping=aes(x=meanreviews, y=meanprice, color=room_type_f))+geom_point()+labs(x="Average Number of Reviews", y="Average Price", fill="Room type")+ggtitle("Airbnb Reviews")+theme(plot.title = element_text(hjust = 0.5))+scale_colour_discrete("Room type")
+```
+For more insight, we also will consider the number of reviews as a response variable. It is possible that different neighborhoods and/or room types are more popular with consumers, and will thus have a different number of reviews. Or,  people living in the AirBnBs in certain areas of New York City might be more likely to provide reviews. Areas like Manhattan, Queens, and Brooklyn are more popular among tourists compared to the Bronx and Staten Island. People who go to travel would live in these areas to ensure more convenient transportation to attractions. Additionally, tourists might be more likely to have free time and leave reviews after their stay. As a result, we hypothesize that households with a relatively higher number of reviews will be those located in Manhattan, Brooklyn, and Queens (neighborhoods that typically cost more according to our analysis in Part B Question 3 & 6). 
+
+A bar plot is plotted as follows to show how neighborhood and room type might impact the number of reviews.
+
+```{r}
+library (plotly)
+
+ggplot(summary_table4,aes(x=reorder(neighbourhood_group_f,desc(meanreviews)),y=meanreviews, fill=room_type_f)) +geom_col(position="dodge") +labs(x="Neighbourhoods", y= "Number of Reviews", fill="Room Type") +ggtitle("Mean Reviews of NYC Airbnb by neighbourhoods")+theme_light()
+```
+
+### Explanation of the Plot & Comparison with the previous plot in Part B Question 6
+
+For the first graph, we treated the number of reviews as an explanatory variable unlike any of the previous graphs. The plot indicates a moderate positive correlation between number of reviews and price, and illustrates that entire homes or apartments, except in one neighborhood, have more reviews than rooms.
+
+For the second graph, instead of directly plotting the mean price on the y-axis, we put the number of reviews on the y-axis to find out its relationship with the neighborhood groups. Within each neighborhood category, I split it into the two room types my teammate simplified to compare the number of reviews from each room type individually to obtain a more precise conclusion. 
+
+
+### **Question 9**
+#### Conclusion of all explanatory variables
+
+##### From the analysis of the entire project, we are able to draw several conclusions about the factors that influence the price of Airbnbs in New York City. Firstly, in Part A we found out that room type is an important indicator of the price with the entire home/apartment costing more than the private and shared room combined. Another factor that plays a role in the price is the neighborhood groups of the households although this relationship is not as explicit as the one between room type and price. Wealthier regions like Manhattan cost much more and the expense of remaining neighborhoods roughly follows the same pattern of levels of wealth. Additionally, the number of reviews appears to have a moderate positive correlation with price, indicating that Airbnb's with more reviews tend to cost more.
+
+##### However, the results I get from the last plot reject our last hypothesis. It indicates that wealthier neighborhoods (Manhattan, Brooklyn, and Queens) that cost more generally have fewer reviews compared to neighborhoods that cost less (Staten Island and the Bronx). The reason behind this might lie in the inconsistency of the quality of the reviews, which isn't revealed by the data we have. Some negative reviews would deter people from living in certain households despite their advantageous locations. 
+
+
+
+
+
